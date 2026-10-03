@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WineQuality | Wine Quality Predictor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍷</text></svg>">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+</head>
+<body>
+{% macro ico(d) %}<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ d }}"/></svg>{% endmacro %}
+{% set I = {
+ 'flask':'M9 3h6M10 3v6L5 19a1.5 1.5 0 0 0 1.3 2h11.4A1.5 1.5 0 0 0 19 19l-5-10V3',
+ 'drop':'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+ 'citrus':'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4',
+ 'cube':'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5',
+ 'atom':'M14 5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 19a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 19a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM12 7v5M12 12l-6 5M12 12l6 5',
+ 'cloud':'M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5 4.5 4.5 0 0 1 17.5 18H7z',
+ 'beaker':'M8 3h8M9 3v5l-4 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-4-9V3M7.5 14h9',
+ 'bulb':'M9 3h6M10 3v7a4 4 0 1 0 4 0V3',
+ 'glass':'M8 3h8l-.5 6a3.5 3.5 0 0 1-7 0L8 3zM12 12.5V20M8.5 20h7',
+ 'home':'M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1v-9z',
+ 'bars':'M6 20V10M12 20V4M18 20v-7',
+ 'info':'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8v.01',
+ 'db':'M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3zM5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6',
+ 'pie':'M12 3v9h9a9 9 0 1 1-9-9zM15 3.5A9 9 0 0 1 20.5 9H15V3.5z',
+ 'doc':'M7 3h7l4 4v14H7V3zM14 3v4h4M10 12h5M10 16h5',
+ 'sun':'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',
+ 'moon':'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z',
+ 'redo':'M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5',
+ 'spark':'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z',
+ 'star':'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z',
+ 'leaf':'M5 19C5 10 10 5 20 4c0 10-5 15-14 15zM5 19c3-5 6-8 10-10',
+ 'wave':'M4 9c3-3 5 3 8 0s5 3 8 0M4 15c3-3 5 3 8 0s5 3 8 0'
+} %}
+{# label, icon, default, min, max, step, decimals, tip #}
+{% set meta = {
+ 'fixed_acidity':['Fixed Acidity','flask',7.4,4,16,0.1,1,'Non-volatile acids (mostly tartaric) that give wine its structure. g/dm³'],
+ 'volatile_acidity':['Volatile Acidity','drop',0.70,0.1,1.6,0.01,2,'Mainly acetic acid; too much smells like vinegar. g/dm³'],
+ 'citric_acid':['Citric Acid','citrus',0.00,0,1,0.01,2,'Adds freshness and citrus notes. g/dm³'],
+ 'residual_sugar':['Residual Sugar','cube',1.9,0.5,16,0.1,1,'Sugar left after fermentation. g/dm³'],
+ 'chlorides':['Chlorides','atom',0.076,0.01,0.62,0.001,3,'Salt content of the wine. g/dm³'],
+ 'free_sulfur_dioxide':['Free Sulfur Dioxide','cloud',11,1,72,0.5,1,'Unbound SO₂ that protects against spoilage. mg/dm³'],
+ 'total_sulfur_dioxide':['Total Sulfur Dioxide','cloud',34,6,290,1,1,'Free plus bound SO₂. mg/dm³'],
+ 'density':['Density','beaker',0.9978,0.990,1.004,0.0001,4,'How heavy the wine is compared with water. g/cm³'],
+ 'ph':['pH','drop',3.51,2.7,4.0,0.01,2,'Acidity scale: lower means more acidic.'],
+ 'sulphates':['Sulphates','bulb',0.56,0.3,2,0.01,2,'Preservative additive that acts as an antioxidant. g/dm³'],
+ 'alcohol':['Alcohol','glass',9.4,8,15,0.1,1,'Alcohol by volume, % vol.']
+} %}
+{% set q = result.quality if result else 0 %}
+{% set tier = ('poor' if q <= 3 else ('average' if q <= 5 else ('good' if q <= 7 else 'excellent'))) %}
+{% set texts = {'poor':'This wine is predicted to be of poor quality.','average':'This wine is predicted to be of average quality.','good':'This wine is predicted to be of good quality.','excellent':'This wine is predicted to be of excellent quality.'} %}
+
+<div class="bg" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i></div>
+
+<header class="top wrap" id="top">
+  <a class="brand" href="#predict">
+    <svg class="logo" viewBox="0 0 24 32" aria-hidden="true"><path d="M4 3h16c0 8-2 12-8 13-6-1-8-5-8-13z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 7h14" stroke="#ff6ec4" stroke-width="3"/><path d="M12 16v11M7 29h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>
+    <span><b class="brand-name">Wine<span class="grad">Quality</span></b><small>Predicting wine quality from its chemistry</small></span>
+  </a>
+  <nav class="pill-nav" aria-label="Primary">
+    <a href="#predict">{{ ico(I.home) }}Home</a>
+    <a href="#insights">{{ ico(I.bars) }}Analysis</a>
+    <a href="#about">{{ ico(I.info) }}About</a>
+    <a href="#dataset">{{ ico(I.db) }}Dataset</a>
+  </nav>
+  <button type="button" class="theme" id="theme" aria-label="Toggle light and dark theme"><span class="t-sun">{{ ico(I.sun) }}</span><span class="t-moon">{{ ico(I.moon) }}</span></button>
+</header>
+
+<div class="layout wrap">
+  <aside class="side">
+    <nav class="side-nav" aria-label="Sections">
+      <a href="#predict">{{ ico(I.home) }}Prediction</a>
+      <a href="#insights">{{ ico(I.bars) }}Data Insights</a>
+      <a href="#visualizations">{{ ico(I.pie) }}Visualizations</a>
+      <a href="#about">{{ ico(I.doc) }}About Project</a>
+    </nav>
+    <svg class="deco" viewBox="0 0 200 230" aria-hidden="true">
+      <defs><linearGradient id="gw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c2185b"/><stop offset="1" stop-color="#3a0a2e"/></linearGradient></defs>
+      <g transform="rotate(-18 100 120)">
+        <path d="M45 30H155C155 95 145 140 100 150 55 140 45 95 45 30Z" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.55)" stroke-width="2.5"/>
+        <path d="M52 72C70 64 85 80 100 72S130 64 148 72C146 112 134 138 100 146 66 138 54 112 52 72Z" fill="url(#gw)"/>
+        <path d="M100 150V210M68 214C85 204 115 204 132 214" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <circle cx="150" cy="30" r="6" fill="#c2185b"/><circle cx="170" cy="55" r="4" fill="#ff6ec4"/><circle cx="135" cy="12" r="3" fill="#c2185b"/>
+    </svg>
+    <div class="tag card">{{ ico(I.leaf) }}<p><b>Better Wine Through Data</b><span>Machine Learning for a Smarter Tomorrow.</span></p></div>
+  </aside>
+
+  <div class="stage">
+
+  <section class="view" id="v-predict">
+    <div class="pred-grid">
+<main class="card main">
+    <h1>{{ ico(I.wave) }}Wine Quality <span class="grad">Predictor</span></h1>
+    <p class="sub">WineQuality is a machine-learning project that predicts how a wine would be rated from 11 physicochemical measurements, such as acidity, sugar and alcohol. Enter the values below and a Random Forest model trained on the Wine Quality (WineQT) dataset estimates a quality score from 0 to 10.</p>
+    <form id="wine-form" method="post" action="{{ url_for('home') }}">
+      <div class="sliders">
+        {% for f in features %}
+        {% set m = meta.get(f, [f.replace('_',' ').capitalize(),'flask','',0,1000,'any',2,'']) %}
+        <label class="slider" title="{{ m[7] }}">
+          <span class="s-ico">{{ ico(I[m[1]]) }}</span>
+          <span class="s-body">
+            <span class="s-top"><span>{{ m[0] }}</span><output>{{ request.form.get(f, m[2]) }}</output></span>
+            <input type="range" name="{{ f }}" min="{{ m[3] }}" max="{{ m[4] }}" step="{{ m[5] }}" value="{{ request.form.get(f, m[2]) }}" data-default="{{ m[2] }}" data-dec="{{ m[6] }}">
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="actions">
+        <button type="button" class="btn ghost" id="reset-btn">{{ ico(I.redo) }}Reset</button>
+        <button type="submit" class="btn primary" id="predict-btn">{{ ico(I.spark) }}Predict Quality</button>
+      </div>
+    </form>
+  </main>
+
+  <aside id="result" class="res{% if result %} has-result{% endif %}" {% if result %}data-has-result{% endif %}>
+    <section class="card r-card">
+      <h2>{{ ico(I.bars) }}Prediction Result</h2>
+      <p class="muted">Based on the input values, the model predicts:</p>
+      <div class="bubble" data-tier="{{ tier if result else 'none' }}"><div role="status" aria-live="polite"><b class="num">{{ q if result else '–' }}</b><span>Predicted Quality</span></div></div>
+    </section>
+    <section class="card tier-card" data-tier="{{ tier if result else 'none' }}">
+      <span class="star">{{ ico(I.star) }}</span>
+      {% if result %}<p><b>{{ tier|capitalize }} Quality</b><span>{{ texts[tier] }}</span></p>
+      {% else %}<p><b>No prediction yet</b><span>Adjust the sliders and select Predict Quality.</span></p>{% endif %}
+    </section>
+    <section class="card scale">
+      <h2>{{ ico(I.bars) }}Quality Scale</h2>
+      <p class="muted">Wine quality is rated from 0 to 10.</p>
+      <ol>
+        {% for k, rng, name in [('poor','0–3','Poor'),('average','4–5','Average'),('good','6–7','Good'),('excellent','8–10','Excellent')] %}
+        <li class="{{ k }}{% if result and tier == k %} on{% endif %}"><i>{{ rng }}</i><span>{{ name }}</span></li>
+        {% endfor %}
+      </ol>
+    </section>
+  </aside>
+    </div>
+  </section>
+
+  <section class="view" id="v-insights" hidden>
+    <div class="card pad"><h1>Data <span class="grad">Insights</span></h1><p class="sub">What the cleaned WineQT data tells us about wine quality.</p><div class="stats" id="stats"></div></div>
+    <div class="two">
+      <div class="card pad"><h2>Quality distribution</h2><p class="muted">Number of wines at each quality score.</p><div class="vbars" id="c-dist"></div></div>
+      <div class="card pad"><h2>What moves with quality</h2><p class="muted">Correlation of each property with quality (−1 to 1).</p><div class="hbars" id="c-corr"></div></div>
+    </div>
+    <div class="card pad"><h2>Key takeaways</h2><ul class="take" id="take"></ul></div>
+  </section>
+
+  <section class="view" id="v-visualizations" hidden>
+    <div class="card pad"><h1><span class="grad">Visualizations</span></h1><p class="sub">Charts drawn from the cleaned WineQT data and the trained Random Forest.</p></div>
+    <div class="two">
+      <div class="card pad"><h2>Average alcohol by quality</h2><p class="muted">% vol</p><div class="vbars" id="c-alc"></div></div>
+      <div class="card pad"><h2>Average volatile acidity by quality</h2><p class="muted">g/dm³</p><div class="vbars" id="c-vol"></div></div>
+      <div class="card pad"><h2>Average sulphates by quality</h2><p class="muted">g/dm³</p><div class="vbars" id="c-sul"></div></div>
+      <div class="card pad"><h2>Feature importance</h2><p class="muted">How much the Random Forest relies on each property.</p><div class="hbars" id="c-imp"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-dataset" hidden>
+    <div class="card pad"><h1>The <span class="grad">Dataset</span></h1><p class="sub">The Wine Quality (WineQT) dataset: physicochemical tests of wines, each with a quality score given by tasters.</p><div class="stats" id="dstats"></div></div>
+    <div class="card pad"><h2>Preview of the cleaned data</h2><p class="muted">First 8 rows after preprocessing.</p><div class="tbl"><table id="t-head"></table></div></div>
+    <div class="card pad"><h2>Summary by property</h2><p class="muted">Minimum, average and maximum in the cleaned data.</p><div class="tbl"><table id="t-stats"></table></div></div>
+  </section>
+
+  <section class="view" id="v-about" hidden>
+    <div class="card pad about">
+      <div>
+        <h1>About the <span class="grad">Project</span></h1>
+        <p>WineQuality is a student machine-learning project in Data Science. It shows how predictive analysis can turn laboratory measurements into an estimated quality score. A Random Forest classifier, trained on the WineQT dataset, reads 11 physicochemical properties and predicts the quality score.</p>
+        <p>A prediction is an estimate from measurements alone, not a tasting.</p>
+      </div>
+      <dl>
+        <div><dt>Algorithm</dt><dd>Random Forest Classifier (300 trees)</dd></div>
+        <div><dt>Dataset</dt><dd>Wine Quality (WineQT)</dd></div>
+        <div><dt>Inputs</dt><dd>11 physicochemical properties</dd></div>
+        <div><dt>Output</dt><dd>Quality score on a 0–10 scale</dd></div>
+      </dl>
+    </div>
+    <div class="card pad"><h2>How it works</h2>
+      <ol class="steps">
+        <li><b>Clean</b><span>The Id column is dropped, duplicate rows are removed and extreme values are capped.</span></li>
+        <li><b>Split</b><span>The data is divided 80% for training and 20% for testing.</span></li>
+        <li><b>Train</b><span>A Random Forest of 300 decision trees learns from the training data.</span></li>
+        <li><b>Predict</b><span>Your 11 values go in and the trees vote on the quality score.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<footer class="wrap foot">Wine Quality Prediction • AI &amp; Data Science Project</footer>
+</body>
+</html>
